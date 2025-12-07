@@ -436,8 +436,8 @@
         </div>
         <p class="subtitle">
           Player 1: the computer guesses your secret. <br />
-          Player 2: you set a secret for them and enter their guesses.  
-          Each player’s score is computed independently; the round advances only after both have played.
+          Player 2: you set a secret and enter their guesses.  
+          While no one has won yet, <strong>each round must have exactly one move from each player</strong> before the next guess.
         </p>
       </div>
       <button class="btn" id="newGameBtn" type="button">
@@ -481,8 +481,8 @@
         </div>
 
         <p class="info">
-          Think of a secret <strong>4-digit number</strong> (digits 0–9, leading zeros allowed).  
-          Whenever the other device gives you feedback, enter how many digits are correct and in the correct position (0–4).
+          Think of a secret <strong>4-digit number</strong> that the computer is trying to guess.  
+          When the other device gives you feedback, enter how many digits are correct and in the correct position (0–4).
         </p>
 
         <div class="field">
@@ -502,7 +502,7 @@
             ✅ Record P1 Feedback
           </button>
           <div class="hint">
-            <span>P1 score is independent; round advances after both players act.</span>
+            <span>One P1 feedback per round while no one has won.</span>
           </div>
         </div>
 
@@ -522,8 +522,8 @@
         </div>
 
         <p class="info">
-          At the start of the game, choose a secret 4-digit number for Player 2 (do not show it).  
-          Then, whenever Player 2 tells you a guess (from their device or verbally), type it here and I’ll score it immediately.
+          Choose a secret 4-digit number for Player 2 (do not show it).  
+          Then, when Player 2 gives you a guess (from their own device or verbally), type it here and I’ll score it immediately.
         </p>
 
         <div class="field">
@@ -560,7 +560,7 @@
             🎯 Score P2 Guess
           </button>
           <div class="hint">
-            <span>Score is shown immediately; counts for this round.</span>
+            <span>One P2 guess per round while no one has won.</span>
           </div>
         </div>
 
@@ -714,7 +714,7 @@
         remaining
       )} candidate${remaining === 1 ? "" : "s"}`;
 
-      // Pills for P1 and overall game state
+      // P1 pills
       document.getElementById(
         "guessCountPill"
       ).textContent = `P1 guesses: ${guessCountP1}`;
@@ -739,7 +739,7 @@
         }
       }
 
-      // Player 2 pills
+      // P2 pills
       document.getElementById(
         "p2GuessCountPill"
       ).textContent = `P2 guesses: ${guessCountP2}`;
@@ -844,24 +844,23 @@
 
     // Try to advance to the next round when both have played
     function maybeAdvanceRound() {
-      // P1 is satisfied this round if either P1 is done or we recorded feedback
-      const p1Satisfied = p1Done || currentRoundP1Done;
-      // P2 is satisfied this round if:
-      //  - no secret set (P2 not playing yet), or
-      //  - P2 is done, or
-      //  - P2 has made a guess this round
-      const p2Satisfied = !secretForP2 || p2Done || currentRoundP2Done;
+      // If no winner yet, enforce strict 1 move each per round
+      if (!winner) {
+        const p1Satisfied = p1Done || currentRoundP1Done;
+        const p2Satisfied = p2Done || (!secretForP2) || currentRoundP2Done;
 
-      if (p1Satisfied && p2Satisfied) {
-        // Advance round
-        roundNumber += 1;
-        currentRoundP1Done = false;
-        currentRoundP2Done = false;
+        if (p1Satisfied && p2Satisfied) {
+          roundNumber += 1;
+          currentRoundP1Done = false;
+          currentRoundP2Done = false;
 
-        // Give P1 the next guess if still playing
-        if (!p1Done && typeof nextGuessForP1 === "string") {
-          currentGuess = nextGuessForP1;
+          if (!p1Done && typeof nextGuessForP1 === "string") {
+            currentGuess = nextGuessForP1;
+          }
         }
+      } else {
+        // After winner is decided, we still allow P2 to continue guessing
+        // but no further guesses are needed for P1 (p1Done will be true).
       }
 
       render();
@@ -904,7 +903,7 @@
       const p2Status = document.getElementById("p2Status");
       if (p2Status) p2Status.textContent = "Secret not set yet.";
 
-      showStatus("Game reset. Set Player 2's secret and start playing!", "default");
+      showStatus("Game reset. Lock Player 2's secret and start playing!", "default");
       render();
     }
 
@@ -929,8 +928,20 @@
 
     // Handle Player 1 feedback (computer guess)
     function handleP1Feedback() {
+      // Require P2 secret to be locked if we are in the competitive 2-player mode
+      if (!secretForP2 && !winner && historyP1.length === 0 && historyP2.length === 0) {
+        showStatus("Please lock Player 2's secret before recording the first Player 1 feedback.", "error");
+        return;
+      }
+
       if (p1Done) {
         showStatus("Player 1 already solved their number. Only Player 2 is still guessing.", "default");
+        return;
+      }
+
+      // While no winner yet: at most one P1 feedback per round
+      if (!winner && currentRoundP1Done) {
+        showStatus("Player 1 already played this round. Wait for Player 2's guess to finish the round.", "error");
         return;
       }
 
@@ -943,12 +954,12 @@
         return;
       }
 
-      // Record history for this round
-      historyP1.push({ guess: currentGuess, feedback: fb });
-      currentRoundP1Done = true;
-
+      // If feedback is 4, we don't need to filter candidates further
       if (fb === 4) {
+        historyP1.push({ guess: currentGuess, feedback: fb });
+        currentRoundP1Done = true;
         p1Done = true;
+
         if (!winner) {
           winner = "Player 1";
           showStatus(
@@ -956,35 +967,39 @@
             "success"
           );
         } else {
-          showStatus(
-            "Player 1 reached score 4 (but a winner was already set).",
-            "default"
-          );
+          showStatus("Player 1 reached score 4 (but a winner was already set).", "default");
         }
-        nextGuessForP1 = null;
-      } else {
-        const newCandidates = candidates.filter(
-          (c) => scoreMatch(c, currentGuess) === fb
-        );
 
-        if (newCandidates.length === 0) {
-          candidates = [];
-          p1Done = true;
-          showStatus(
-            "No possible numbers remain for Player 1 based on the feedback. " +
-            "Some feedback may be inconsistent. Player 2 can still continue guessing, or you can start a new game.",
-            "error"
-          );
-          nextGuessForP1 = null;
-        } else {
-          candidates = newCandidates;
-          nextGuessForP1 = chooseBestGuess(candidates);
-          showStatus(
-            "Feedback recorded for Player 1. Waiting for Player 2 (if playing) to finish this round.",
-            "default"
-          );
-        }
+        nextGuessForP1 = null;
+        maybeAdvanceRound();
+        return;
       }
+
+      // Otherwise, filter candidate set and detect inconsistencies
+      const newCandidates = candidates.filter(
+        (c) => scoreMatch(c, currentGuess) === fb
+      );
+
+      if (newCandidates.length === 0) {
+        showStatus(
+          "This feedback is inconsistent with earlier rounds. " +
+          "No possible numbers remain. Please double-check and correct this feedback.",
+          "error"
+        );
+        // Do NOT record this round; keep previous candidates and guess.
+        return;
+      }
+
+      // Feedback is consistent: record it and prepare next guess
+      candidates = newCandidates;
+      historyP1.push({ guess: currentGuess, feedback: fb });
+      currentRoundP1Done = true;
+      nextGuessForP1 = chooseBestGuess(candidates);
+
+      showStatus(
+        "Feedback recorded for Player 1. Waiting for Player 2 (if still playing) to finish this round.",
+        "default"
+      );
 
       maybeAdvanceRound();
     }
@@ -998,6 +1013,12 @@
 
       if (p2Done) {
         showStatus("Player 2 already solved their secret. Only Player 1 may still be playing.", "default");
+        return;
+      }
+
+      // While no winner yet: at most one P2 guess per round
+      if (!winner && currentRoundP2Done) {
+        showStatus("Player 2 already played this round. Wait for Player 1 feedback to finish the round.", "error");
         return;
       }
 
