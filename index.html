@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart 4-Digit Guesser – 2 Players</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --error: #f97373;
+      --success: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1f2937, #020617);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      padding: 1.5rem;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 900px;
+      background: linear-gradient(145deg, #020617 0%, #020617 40%, #111827 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow:
+        0 20px 40px rgba(15, 23, 42, 0.8),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 1.75rem 1.75rem 2rem;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .title-emoji {
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+      max-width: 520px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+    }
+
+    .btn {
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      color: var(--text);
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .btn:hover {
+      background: rgba(15, 23, 42, 1);
+      border-color: #e5e7eb;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      filter: brightness(0.96);
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 700px) {
+      .scoreboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .score-item {
+      background: radial-gradient(circle at top, #020617, #020617 45%, #111827);
+      border-radius: 16px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      padding: 0.6rem 0.8rem;
+    }
+
+    .score-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.15rem;
+    }
+
+    .score-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .score-value.highlight {
+      color: #bfdbfe;
+    }
+
+    .main-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .main-card {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, #111827, #020617);
+      border-radius: 20px;
+      padding: 1.25rem;
+      border: 1px solid rgba(55, 65, 81, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.13), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .guess-display-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 0.75rem 0 1.25rem;
+    }
+
+    .guess-display {
+      display: inline-flex;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .guess-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .guess-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      padding-left: 0.25em;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.6);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--muted);
+    }
+
+    .info {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 0.25rem;
+    }
+
+    .info strong {
+      color: var(--text);
+    }
+
+    .field {
+      margin-top: 0.9rem;
+    }
+
+    label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input[type="number"]:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+    }
+
+    .submit-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      border: none;
+      color: white;
+      padding: 0.55rem 0.95rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-0.5px);
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0.5px);
+      box-shadow: none;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .hint span {
+      padding: 0.15rem 0.4rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(55, 65, 81, 0.8);
+    }
+
+    .status {
+      margin-top: 0.8rem;
+      font-size: 0.83rem;
+    }
+
+    .status.error {
+      color: var(--error);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+    }
+
+    .pill {
+      font-size: 0.75rem;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      color: var(--muted);
+    }
+
+    .history-panel {
+      margin-top: 1.5rem;
+    }
+
+    .history-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .history-columns {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .history-list {
+      margin-top: 0.5rem;
+      max-height: 230px;
+      overflow-y: auto;
+      padding-right: 0.2rem;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0.45rem;
+      border-radius: 10px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      background: rgba(15, 23, 42, 0.85);
+      font-size: 0.8rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .history-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .history-index {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      color: var(--muted);
+    }
+
+    .history-guess {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing: 0.14em;
+      font-size: 0.95rem;
+    }
+
+    .history-feedback {
+      font-size: 0.78rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.7);
+      background: var(--accent-soft);
+      color: #bfdbfe;
+    }
+
+    .footer {
+      margin-top: 1.25rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .footer span {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="title">
+          <span class="title-emoji">🤖</span>
+          <span>Smart 4-Digit Guesser – 2 Players</span>
+        </div>
+        <p class="subtitle">
+          Player 1: the computer guesses your secret. <br />
+          Player 2: you set a secret for them and enter their guesses. First to score 4 wins — but the other can keep going until they also reach 4.
+        </p>
+      </div>
+      <button class="btn" id="newGameBtn" type="button">
+        🔄 New Game
+      </button>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+      <div class="score-item">
+        <div class="score-label">Round</div>
+        <div class="score-value" id="roundNumberDisplay">1</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">P1 guesses (computer)</div>
+        <div class="score-value" id="scoreP1Guesses">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">P2 guesses (human)</div>
+        <div class="score-value" id="scoreP2Guesses">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Winner</div>
+        <div class="score-value highlight" id="scoreWinner">—</div>
+      </div>
+    </div>
+
+    <div class="main-card">
+      <!-- Left: Player 1 (computer guessing) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Player 1 – Computer’s Guess</div>
+          <div class="badge" id="remainingBadge">10,000 candidates</div>
+        </div>
+
+        <div class="guess-display-wrapper">
+          <div class="guess-display">
+            <span class="guess-label">Guess</span>
+            <span class="guess-value" id="currentGuess">0000</span>
+          </div>
+        </div>
+
+        <p class="info">
+          Think of a secret <strong>4-digit number</strong> (digits 0–9, leading zeros allowed).  
+          After each guess, enter how many digits are correct and in the correct position (0–4).
+        </p>
+
+        <div class="field">
+          <label for="feedbackInput">Feedback for Player 1 (0–4)</label>
+          <input
+            id="feedbackInput"
+            type="number"
+            min="0"
+            max="4"
+            step="1"
+            value="0"
+          />
+        </div>
+
+        <div class="submit-row">
+          <button class="btn-primary" id="submitFeedbackBtn" type="button">
+            ➡ Submit Round
+          </button>
+          <div class="hint">
+            <span>Both players’ moves are recorded each round.</span>
+          </div>
+        </div>
+
+        <div id="statusMessage" class="status"></div>
+
+        <div class="pill-row">
+          <div class="pill" id="guessCountPill">P1 guesses: 0</div>
+          <div class="pill" id="gameStatePill">Game in progress</div>
+        </div>
+      </div>
+
+      <!-- Right: Player 2 panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Player 2 – Human Guessing</div>
+          <div class="badge">Secret + guesses</div>
+        </div>
+
+        <p class="info">
+          At the start of the game, choose a secret 4-digit number for Player 2.  
+          Do <strong>not</strong> show it to Player 2. Then, each round, enter Player 2’s guess and I’ll compute the score (0–4).
+        </p>
+
+        <div class="field">
+          <label for="p2SecretInput">Secret number for Player 2 (4 digits)</label>
+          <input
+            id="p2SecretInput"
+            type="text"
+            maxlength="4"
+            placeholder="e.g., 5831"
+          />
+        </div>
+
+        <div class="submit-row" style="margin-top:0.75rem;">
+          <button class="btn" id="lockP2SecretBtn" type="button">
+            🔒 Lock Secret
+          </button>
+          <div class="hint">
+            <span>Lock once, then only guesses change.</span>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:1.1rem;">
+          <label for="p2GuessInput">Player 2 guess (4 digits)</label>
+          <input
+            id="p2GuessInput"
+            type="text"
+            maxlength="4"
+            placeholder="Enter Player 2's guess"
+          />
+        </div>
+
+        <div class="field" style="margin-top:0.7rem;">
+          <label>Player 2 status</label>
+          <p id="p2Status" class="info">Secret not set yet.</p>
+        </div>
+
+        <div class="pill-row">
+          <div class="pill" id="p2GuessCountPill">P2 guesses: 0</div>
+          <div class="pill" id="p2StatePill">Waiting for secret</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History panel -->
+    <div class="panel history-panel">
+      <div class="panel-header">
+        <div class="panel-title">History</div>
+        <div class="badge">All rounds</div>
+      </div>
+      <div class="history-columns">
+        <div>
+          <div class="panel-title" style="margin-bottom:0.15rem;">Player 1 (computer)</div>
+          <div id="historyListP1" class="history-list"></div>
+        </div>
+        <div>
+          <div class="panel-title" style="margin-bottom:0.15rem;">Player 2 (human)</div>
+          <div id="historyListP2" class="history-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span id="footerSummary">
+        Minimax-based strategy over remaining candidates for Player 1.
+      </span>
+      <span>
+        Tip: Host this file directly on GitHub Pages.
+      </span>
+    </div>
+  </div>
+
+  <script>
+    // ========== Core logic ==========
+
+    const ALL_CODES = Array.from({ length: 10000 }, (_, i) =>
+      i.toString().padStart(4, "0")
+    );
+
+    let candidates = [];
+    let historyP1 = [];
+    let historyP2 = [];
+    let currentGuess = "0000";
+    let p1Done = false;
+    let p2Done = false;
+    let secretForP2 = null;
+    let winner = null;
+    let roundNumber = 1;
+
+    const MAX_GUESS_POOL = 2000;
+
+    function scoreMatch(code, guess) {
+      let score = 0;
+      for (let i = 0; i < 4; i++) {
+        if (code[i] === guess[i]) score++;
+      }
+      return score;
+    }
+
+    function sampleArray(arr, size) {
+      if (size >= arr.length) return [...arr];
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy.slice(0, size);
+    }
+
+    function chooseBestGuess(cands) {
+      const n = cands.length;
+      if (n === 1) return cands[0];
+
+      let guessPool;
+      if (n > MAX_GUESS_POOL) {
+        guessPool = sampleArray(cands, MAX_GUESS_POOL);
+      } else {
+        guessPool = cands;
+      }
+
+      let bestGuess = guessPool[0];
+      let bestWorstCase = n + 1;
+
+      for (const g of guessPool) {
+        const buckets = [0, 0, 0, 0, 0];
+        for (const c of cands) {
+          const s = scoreMatch(c, g);
+          buckets[s]++;
+        }
+        const worst = Math.max(...buckets);
+        if (worst < bestWorstCase) {
+          bestWorstCase = worst;
+          bestGuess = g;
+        }
+      }
+      return bestGuess;
+    }
+
+    function formatNumberWithCommas(n) {
+      return n.toLocaleString("en-US");
+    }
+
+    // ========== UI helpers ==========
+
+    function showStatus(message, type) {
+      const el = document.getElementById("statusMessage");
+      el.textContent = message;
+      el.className = "status";
+      if (type === "error") {
+        el.classList.add("error");
+      } else if (type === "success") {
+        el.classList.add("success");
+      }
+    }
+
+    function render() {
+      // Round & scoreboard
+      document.getElementById("roundNumberDisplay").textContent = roundNumber;
+      const guessCountP1 = historyP1.length;
+      const guessCountP2 = historyP2.length;
+      document.getElementById("scoreP1Guesses").textContent = guessCountP1;
+      document.getElementById("scoreP2Guesses").textContent = guessCountP2;
+
+      const winnerEl = document.getElementById("scoreWinner");
+      if (!winner) {
+        winnerEl.textContent = "—";
+      } else if (winner === "Both") {
+        winnerEl.textContent = "Both";
+      } else {
+        winnerEl.textContent = winner;
+      }
+
+      // Player 1: guess display
+      document.getElementById("currentGuess").textContent = currentGuess;
+
+      // Remaining candidates
+      const remaining = candidates.length;
+      document.getElementById(
+        "remainingBadge"
+      ).textContent = `${formatNumberWithCommas(
+        remaining
+      )} candidate${remaining === 1 ? "" : "s"}`;
+
+      // Pills for P1 and overall game state
+      document.getElementById(
+        "guessCountPill"
+      ).textContent = `P1 guesses: ${guessCountP1}`;
+
+      const statePill = document.getElementById("gameStatePill");
+      statePill.style.borderColor = "rgba(75, 85, 99, 0.9)";
+      statePill.style.color = "#9ca3af";
+
+      if (winner === "Player 1") {
+        statePill.textContent = "Winner: Player 1";
+        statePill.style.borderColor = "rgba(34, 197, 94, 0.8)";
+        statePill.style.color = "#bbf7d0";
+      } else if (winner === "Player 2") {
+        statePill.textContent = "Winner: Player 2";
+        statePill.style.borderColor = "rgba(34, 197, 94, 0.8)";
+        statePill.style.color = "#bbf7d0";
+      } else if (winner === "Both") {
+        statePill.textContent = "Both players solved!";
+        statePill.style.borderColor = "rgba(34, 197, 94, 0.8)";
+        statePill.style.color = "#bbf7d0";
+      } else if (!p1Done) {
+        statePill.textContent = "Game in progress";
+      } else {
+        statePill.textContent = "P1 solved; P2 can continue";
+      }
+
+      // Player 2 pills
+      document.getElementById(
+        "p2GuessCountPill"
+      ).textContent = `P2 guesses: ${guessCountP2}`;
+
+      const p2StatePill = document.getElementById("p2StatePill");
+      if (!secretForP2) {
+        p2StatePill.textContent = "Waiting for secret";
+      } else if (p2Done) {
+        p2StatePill.textContent = "P2 solved";
+      } else {
+        p2StatePill.textContent = "P2 guessing";
+      }
+
+      // History P1
+      const historyListP1 = document.getElementById("historyListP1");
+      historyListP1.innerHTML = "";
+      if (historyP1.length === 0) {
+        const p = document.createElement("p");
+        p.className = "info";
+        p.textContent = "No guesses yet.";
+        historyListP1.appendChild(p);
+      } else {
+        historyP1.forEach((item, idx) => {
+          const row = document.createElement("div");
+          row.className = "history-item";
+
+          const left = document.createElement("div");
+          left.className = "history-left";
+
+          const badge = document.createElement("div");
+          badge.className = "history-index";
+          badge.textContent = idx + 1;
+
+          const guessSpan = document.createElement("div");
+          guessSpan.className = "history-guess";
+          guessSpan.textContent = item.guess;
+
+          left.appendChild(badge);
+          left.appendChild(guessSpan);
+
+          const fbSpan = document.createElement("div");
+          fbSpan.className = "history-feedback";
+          fbSpan.textContent = `score = ${item.feedback}`;
+
+          row.appendChild(left);
+          row.appendChild(fbSpan);
+
+          historyListP1.appendChild(row);
+        });
+      }
+
+      // History P2
+      const historyListP2 = document.getElementById("historyListP2");
+      historyListP2.innerHTML = "";
+      if (historyP2.length === 0) {
+        const p = document.createElement("p");
+        p.className = "info";
+        p.textContent = "No guesses yet.";
+        historyListP2.appendChild(p);
+      } else {
+        historyP2.forEach((item, idx) => {
+          const row = document.createElement("div");
+          row.className = "history-item";
+
+          const left = document.createElement("div");
+          left.className = "history-left";
+
+          const badge = document.createElement("div");
+          badge.className = "history-index";
+          badge.textContent = idx + 1;
+
+          const guessSpan = document.createElement("div");
+          guessSpan.className = "history-guess";
+          guessSpan.textContent = item.guess;
+
+          left.appendChild(badge);
+          left.appendChild(guessSpan);
+
+          const fbSpan = document.createElement("div");
+          fbSpan.className = "history-feedback";
+          fbSpan.textContent = `score = ${item.feedback}`;
+
+          row.appendChild(left);
+          row.appendChild(fbSpan);
+
+          historyListP2.appendChild(row);
+        });
+      }
+
+      // Footer summary
+      const footer = document.getElementById("footerSummary");
+      if (winner === "Player 1") {
+        footer.textContent = `Player 1 (computer) found the number in ${guessCountP1} guesses.`;
+      } else if (winner === "Player 2") {
+        footer.textContent = `Player 2 solved their secret in ${guessCountP2} guesses.`;
+      } else if (winner === "Both") {
+        footer.textContent = `Both players solved their secrets. P1 guesses: ${guessCountP1}, P2 guesses: ${guessCountP2}.`;
+      } else {
+        footer.textContent = `Minimax over ${formatNumberWithCommas(
+          remaining
+        )} candidates guides Player 1’s guesses.`;
+      }
+    }
+
+    // ========== Game control ==========
+
+    function initGame() {
+      candidates = [...ALL_CODES];
+      historyP1 = [];
+      historyP2 = [];
+      currentGuess = chooseBestGuess(candidates);
+      p1Done = false;
+      p2Done = false;
+      secretForP2 = null;
+      winner = null;
+      roundNumber = 1;
+
+      const feedbackInput = document.getElementById("feedbackInput");
+      if (feedbackInput) feedbackInput.value = "0";
+
+      const p2SecretInput = document.getElementById("p2SecretInput");
+      const lockBtn = document.getElementById("lockP2SecretBtn");
+      const p2GuessInput = document.getElementById("p2GuessInput");
+
+      if (p2SecretInput) {
+        p2SecretInput.value = "";
+        p2SecretInput.disabled = false;
+      }
+      if (lockBtn) {
+        lockBtn.disabled = false;
+      }
+      if (p2GuessInput) {
+        p2GuessInput.value = "";
+      }
+
+      const p2Status = document.getElementById("p2Status");
+      if (p2Status) p2Status.textContent = "Secret not set yet.";
+
+      showStatus("Game reset. Set Player 2's secret and start playing!", "default");
+      render();
+    }
+
+    function handleLockP2Secret() {
+      const input = document.getElementById("p2SecretInput");
+      if (!input) return;
+      const val = input.value.trim();
+      if (!/^\d{4}$/.test(val)) {
+        showStatus("Player 2: secret must be exactly 4 digits (0000–9999).", "error");
+        return;
+      }
+      secretForP2 = val;
+      input.disabled = true;
+
+      const lockBtn = document.getElementById("lockP2SecretBtn");
+      if (lockBtn) lockBtn.disabled = true;
+
+      const p2Status = document.getElementById("p2Status");
+      if (p2Status) p2Status.textContent = "Secret locked. Player 2 may start guessing.";
+      render();
+    }
+
+    function handleSubmitRound() {
+      let p1JustDone = false;
+      let p2JustDone = false;
+      let anyAction = false;
+
+      const feedbackEl = document.getElementById("feedbackInput");
+      const p2GuessInput = document.getElementById("p2GuessInput");
+      const p2StatusEl = document.getElementById("p2Status");
+
+      // ----- Player 1 (computer guessing) -----
+      if (!p1Done) {
+        const rawFb = feedbackEl.value.trim();
+        const fb = parseInt(rawFb, 10);
+
+        if (Number.isNaN(fb) || fb < 0 || fb > 4) {
+          showStatus("Player 1: please enter valid feedback between 0 and 4.", "error");
+          return;
+        }
+
+        historyP1.push({ guess: currentGuess, feedback: fb });
+        anyAction = true;
+
+        if (fb === 4) {
+          p1Done = true;
+          p1JustDone = true;
+        } else {
+          const newCandidates = candidates.filter(
+            (c) => scoreMatch(c, currentGuess) === fb
+          );
+
+          if (newCandidates.length === 0) {
+            candidates = [];
+            p1Done = true;
+            showStatus(
+              "No possible numbers remain for Player 1 based on the feedback. " +
+              "Some feedback may be inconsistent. Player 2 can still continue guessing, or you can start a new game.",
+              "error"
+            );
+          } else {
+            candidates = newCandidates;
+            currentGuess = chooseBestGuess(candidates);
+          }
+        }
+      }
+
+      // ----- Player 2 (human guessing) -----
+      if (!secretForP2) {
+        // If there's a guess entered but no secret, warn
+        const guessStr = p2GuessInput.value.trim();
+        if (guessStr.length > 0) {
+          showStatus("Please lock Player 2's secret before entering guesses.", "error");
+          return;
+        }
+      } else if (!p2Done) {
+        const guessStr = p2GuessInput.value.trim();
+        if (!/^\d{4}$/.test(guessStr)) {
+          showStatus("Player 2: guess must be exactly 4 digits (0000–9999).", "error");
+          return;
+        }
+        const score = scoreMatch(secretForP2, guessStr);
+        historyP2.push({ guess: guessStr, feedback: score });
+        anyAction = true;
+
+        if (p2StatusEl) {
+          p2StatusEl.textContent = `Last guess ${guessStr}: score = ${score}.`;
+        }
+        p2GuessInput.value = "";
+
+        if (score === 4) {
+          p2Done = true;
+          p2JustDone = true;
+        }
+      }
+
+      if (!anyAction) {
+        showStatus(
+          "Nothing to record this round. Make sure at least one player played.",
+          "error"
+        );
+        render();
+        return;
+      }
+
+      // ----- Winner logic -----
+      if (!winner) {
+        if (p1JustDone && p2JustDone) {
+          winner = "Both";
+          showStatus("🎉 Both players reached score 4 in the same round!", "success");
+        } else if (p1JustDone) {
+          winner = "Player 1";
+          showStatus(
+            `🎉 Player 1 wins! The computer found the number in ${historyP1.length} guesses.`,
+            "success"
+          );
+        } else if (p2JustDone) {
+          winner = "Player 2";
+          showStatus(
+            `🎉 Player 2 wins! They guessed their secret in ${historyP2.length} guesses.`,
+            "success"
+          );
+        } else {
+          showStatus("Round recorded. Keep going!", "default");
+        }
+      } else {
+        showStatus(
+          "Round recorded. Winner already decided; the other player can still finish.",
+          "default"
+        );
+      }
+
+      // Advance round
+      roundNumber += 1;
+      render();
+    }
+
+    // ========== Event wiring ==========
+
+    document
+      .getElementById("submitFeedbackBtn")
+      .addEventListener("click", handleSubmitRound);
+
+    document
+      .getElementById("newGameBtn")
+      .addEventListener("click", initGame);
+
+    document
+      .getElementById("lockP2SecretBtn")
+      .addEventListener("click", handleLockP2Secret);
+
+    document
+      .getElementById("feedbackInput")
+      .addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSubmitRound();
+        }
+      });
+
+    document
+      .getElementById("p2GuessInput")
+      .addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSubmitRound();
+        }
+      });
+
+    // Initial game setup
+    initGame();
+  </script>
+</body>
+</html>
