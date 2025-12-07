@@ -435,9 +435,8 @@
           <span>Smart 4-Digit Guesser – 2 Players</span>
         </div>
         <p class="subtitle">
-          Player 1: the computer guesses your secret. <br />
-          Player 2: you set a secret and enter their guesses.  
-          While no one has won yet, <strong>each round must have exactly one move from each player</strong> before the next guess.
+          Player 1: the computer guesses your secret. Player 2: you set a secret and enter their guesses.
+          <strong>While no one has won, each round must have exactly one move from each player</strong> before the next guess.
         </p>
       </div>
       <button class="btn" id="newGameBtn" type="button">
@@ -481,8 +480,7 @@
         </div>
 
         <p class="info">
-          Think of a secret <strong>4-digit number</strong> that the computer is trying to guess.  
-          When the other device gives you feedback, enter how many digits are correct and in the correct position (0–4).
+          Think of a secret <strong>4-digit number</strong>. When the other device tells you how many digits are correct in the correct position (0–4), enter that feedback here.
         </p>
 
         <div class="field">
@@ -502,7 +500,7 @@
             ✅ Record P1 Feedback
           </button>
           <div class="hint">
-            <span>One P1 feedback per round while no one has won.</span>
+            <span>Only one P1 feedback per round.</span>
           </div>
         </div>
 
@@ -522,8 +520,7 @@
         </div>
 
         <p class="info">
-          Choose a secret 4-digit number for Player 2 (do not show it).  
-          Then, when Player 2 gives you a guess (from their own device or verbally), type it here and I’ll score it immediately.
+          Choose a secret 4-digit number for Player 2. When Player 2 gives you a guess (from another device or verbally), enter it here to score it.
         </p>
 
         <div class="field">
@@ -560,7 +557,7 @@
             🎯 Score P2 Guess
           </button>
           <div class="hint">
-            <span>One P2 guess per round while no one has won.</span>
+            <span>Only one P2 guess per round.</span>
           </div>
         </div>
 
@@ -605,8 +602,7 @@
   </div>
 
   <script>
-    // ========== Core logic ==========
-
+    // ===== Core state =====
     const ALL_CODES = Array.from({ length: 10000 }, (_, i) =>
       i.toString().padStart(4, "0")
     );
@@ -679,8 +675,7 @@
       return n.toLocaleString("en-US");
     }
 
-    // ========== UI helpers ==========
-
+    // ===== UI helpers =====
     function showStatus(message, type) {
       const el = document.getElementById("statusMessage");
       el.textContent = message;
@@ -693,20 +688,17 @@
     }
 
     function render() {
-      // Round & scoreboard
-      document.getElementById("roundNumberDisplay").textContent = roundNumber;
       const guessCountP1 = historyP1.length;
       const guessCountP2 = historyP2.length;
+
+      // Scoreboard
+      document.getElementById("roundNumberDisplay").textContent = roundNumber;
       document.getElementById("scoreP1Guesses").textContent = guessCountP1;
       document.getElementById("scoreP2Guesses").textContent = guessCountP2;
+      document.getElementById("scoreWinner").textContent = winner || "—";
 
-      const winnerEl = document.getElementById("scoreWinner");
-      winnerEl.textContent = winner ? winner : "—";
-
-      // Player 1: guess display
+      // P1 guess + remaining candidates
       document.getElementById("currentGuess").textContent = currentGuess;
-
-      // Remaining candidates
       const remaining = candidates.length;
       document.getElementById(
         "remainingBadge"
@@ -714,7 +706,6 @@
         remaining
       )} candidate${remaining === 1 ? "" : "s"}`;
 
-      // P1 pills
       document.getElementById(
         "guessCountPill"
       ).textContent = `P1 guesses: ${guessCountP1}`;
@@ -722,7 +713,6 @@
       const statePill = document.getElementById("gameStatePill");
       statePill.style.borderColor = "rgba(75, 85, 99, 0.9)";
       statePill.style.color = "#9ca3af";
-
       if (winner === "Player 1") {
         statePill.textContent = "Winner: Player 1";
         statePill.style.borderColor = "rgba(34, 197, 94, 0.8)";
@@ -732,11 +722,7 @@
         statePill.style.borderColor = "rgba(34, 197, 94, 0.8)";
         statePill.style.color = "#bbf7d0";
       } else {
-        if (!p1Done) {
-          statePill.textContent = "Game in progress";
-        } else {
-          statePill.textContent = "P1 solved; P2 can continue";
-        }
+        statePill.textContent = p1Done ? "P1 solved; P2 can continue" : "Game in progress";
       }
 
       // P2 pills
@@ -786,7 +772,6 @@
 
           row.appendChild(left);
           row.appendChild(fbSpan);
-
           historyListP1.appendChild(row);
         });
       }
@@ -824,12 +809,10 @@
 
           row.appendChild(left);
           row.appendChild(fbSpan);
-
           historyListP2.appendChild(row);
         });
       }
 
-      // Footer summary
       const footer = document.getElementById("footerSummary");
       if (winner === "Player 1") {
         footer.textContent = `Player 1 (computer) found the number in ${guessCountP1} guesses.`;
@@ -842,9 +825,8 @@
       }
     }
 
-    // Try to advance to the next round when both have played
     function maybeAdvanceRound() {
-      // If no winner yet, enforce strict 1 move each per round
+      // Only enforce lockstep while no winner
       if (!winner) {
         const p1Satisfied = p1Done || currentRoundP1Done;
         const p2Satisfied = p2Done || (!secretForP2) || currentRoundP2Done;
@@ -858,16 +840,11 @@
             currentGuess = nextGuessForP1;
           }
         }
-      } else {
-        // After winner is decided, we still allow P2 to continue guessing
-        // but no further guesses are needed for P1 (p1Done will be true).
       }
-
       render();
     }
 
-    // ========== Game control ==========
-
+    // ===== Game control =====
     function initGame() {
       candidates = [...ALL_CODES];
       historyP1 = [];
@@ -893,12 +870,8 @@
         p2SecretInput.value = "";
         p2SecretInput.disabled = false;
       }
-      if (lockBtn) {
-        lockBtn.disabled = false;
-      }
-      if (p2GuessInput) {
-        p2GuessInput.value = "";
-      }
+      if (lockBtn) lockBtn.disabled = false;
+      if (p2GuessInput) p2GuessInput.value = "";
 
       const p2Status = document.getElementById("p2Status");
       if (p2Status) p2Status.textContent = "Secret not set yet.";
@@ -926,22 +899,16 @@
       render();
     }
 
-    // Handle Player 1 feedback (computer guess)
+    // Player 1 feedback
     function handleP1Feedback() {
-      // Require P2 secret to be locked if we are in the competitive 2-player mode
-      if (!secretForP2 && !winner && historyP1.length === 0 && historyP2.length === 0) {
-        showStatus("Please lock Player 2's secret before recording the first Player 1 feedback.", "error");
-        return;
-      }
-
       if (p1Done) {
-        showStatus("Player 1 already solved their number. Only Player 2 is still guessing.", "default");
+        showStatus("Player 1 already solved. Only Player 2 may still play.", "default");
         return;
       }
 
-      // While no winner yet: at most one P1 feedback per round
+      // While no winner: only one move per round
       if (!winner && currentRoundP1Done) {
-        showStatus("Player 1 already played this round. Wait for Player 2's guess to finish the round.", "error");
+        showStatus("Player 1 already played this round. Wait for Player 2 to finish the round.", "error");
         return;
       }
 
@@ -950,11 +917,11 @@
       const fb = parseInt(rawFb, 10);
 
       if (Number.isNaN(fb) || fb < 0 || fb > 4) {
-        showStatus("Player 1: please enter valid feedback between 0 and 4.", "error");
+        showStatus("Player 1: please enter a feedback between 0 and 4.", "error");
         return;
       }
 
-      // If feedback is 4, we don't need to filter candidates further
+      // If fb = 4, P1 solved
       if (fb === 4) {
         historyP1.push({ guess: currentGuess, feedback: fb });
         currentRoundP1Done = true;
@@ -975,50 +942,42 @@
         return;
       }
 
-      // Otherwise, filter candidate set and detect inconsistencies
+      // Filter candidates, detect inconsistency
       const newCandidates = candidates.filter(
         (c) => scoreMatch(c, currentGuess) === fb
       );
 
       if (newCandidates.length === 0) {
         showStatus(
-          "This feedback is inconsistent with earlier rounds. " +
-          "No possible numbers remain. Please double-check and correct this feedback.",
+          "This feedback is inconsistent with earlier rounds. No possible numbers remain. Please correct this feedback.",
           "error"
         );
-        // Do NOT record this round; keep previous candidates and guess.
         return;
       }
 
-      // Feedback is consistent: record it and prepare next guess
       candidates = newCandidates;
       historyP1.push({ guess: currentGuess, feedback: fb });
       currentRoundP1Done = true;
       nextGuessForP1 = chooseBestGuess(candidates);
 
-      showStatus(
-        "Feedback recorded for Player 1. Waiting for Player 2 (if still playing) to finish this round.",
-        "default"
-      );
-
+      showStatus("Player 1 feedback recorded. Wait for Player 2 to finish this round.", "default");
       maybeAdvanceRound();
     }
 
-    // Handle Player 2 guess
+    // Player 2 guess
     function handleP2Guess() {
       if (!secretForP2) {
-        showStatus("Please lock Player 2's secret before scoring their guesses.", "error");
+        showStatus("Lock Player 2's secret before scoring guesses.", "error");
         return;
       }
 
       if (p2Done) {
-        showStatus("Player 2 already solved their secret. Only Player 1 may still be playing.", "default");
+        showStatus("Player 2 already solved. Only Player 1 may still play.", "default");
         return;
       }
 
-      // While no winner yet: at most one P2 guess per round
       if (!winner && currentRoundP2Done) {
-        showStatus("Player 2 already played this round. Wait for Player 1 feedback to finish the round.", "error");
+        showStatus("Player 2 already played this round. Wait for Player 1 to finish the round.", "error");
         return;
       }
 
@@ -1056,7 +1015,7 @@
         }
       } else {
         showStatus(
-          `Player 2 guess scored: ${score}. Waiting for Player 1 feedback (if still playing) to finish this round.`,
+          `Player 2 guess scored: ${score}. Wait for Player 1 to finish this round.`,
           "default"
         );
       }
@@ -1064,8 +1023,7 @@
       maybeAdvanceRound();
     }
 
-    // ========== Event wiring ==========
-
+    // ===== Events =====
     document
       .getElementById("submitFeedbackBtn")
       .addEventListener("click", handleP1Feedback);
@@ -1100,7 +1058,7 @@
         }
       });
 
-    // Initial game setup
+    // Start
     initGame();
   </script>
 </body>
